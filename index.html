@@ -276,7 +276,7 @@
         }
         function getTimer() {
             const now = new Date();
-            const difference = nextWordelTime - now;
+            const difference = Math.max(0, nextWordelTime - now);
             const hours = Math.floor(difference / 3600_000);
             const minutes = Math.floor(mod(difference, 3600_000) / 60_000);
             const seconds = Math.floor(mod(difference, 60_000) / 1_000);
