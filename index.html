@@ -171,8 +171,8 @@
         function getDayNumber() {
             return Math.round(new Date().getTime() / 86400_000) - 19016;
         }
+        const dayNumber = getDayNumber();
         function getActualWord() {
-            const dayNumber = getDayNumber();
             const r = random_R2(dayNumber);
             return REAL_WORDS[Math.floor(r * REAL_WORDS.length)];
         }
@@ -276,10 +276,17 @@
                     break;
             }
         }
-        function guess() {
-            const word = currentRow.map((element) => element.innerHTML.trim()).join("");
-            if (word.length !== 5) return;
-            const result = wordelResult(word, actualWord);
+        function addRows() {
+            for (let i = 0; i < 6; i++) {
+                let newRow = document.createElement("row");
+                for (let j = 0; j < 5; j++) {
+                    let newTile = document.createElement("tile");
+                    newRow.append(newTile);
+                }
+                document.querySelector("main").append(newRow);
+            }
+        }
+        function setRowResult(result) {
             for (let i = 0; i < 5; i++) {
                 let className = "";
                 switch (result[i]) {
@@ -296,27 +303,48 @@
                 currentRow[i].classList.add(className);
                 currentRow[i].classList.remove("active");
             }
+
             const didWin = result.every((v) => v === 2);
             if (!didWin) {
                 let nextRow = currentRow[0].parentElement.nextElementSibling;
                 if (nextRow === null) {
-                    let oldCurrentRow = currentRow;
-                    for (let i = 0; i < 6; i++) {
-                        let newRow = document.createElement("row");
-                        for (let j = 0; j < 5; j++) {
-                            let newTile = document.createElement("tile");
-                            newRow.append(newTile);
-                        }
-                        currentRow[0].parentElement.parentElement.append(newRow);
-                        currentRow = [...newRow.children];
-                    }
-                    nextRow = oldCurrentRow[0].parentElement.nextElementSibling;
+                    addRows();
+                    nextRow = currentRow[0].parentElement.nextElementSibling;
                     actualWord = choose(getSimilarWords());
                 }
                 currentRow = [...nextRow.children];
             } else {
                 currentRow = [];
             }
+        }
+        function guess() {
+            const word = currentRow.map((element) => element.innerHTML.trim()).join("");
+            if (word.length !== 5) return;
+            const result = wordelResult(word, actualWord);
+            setRowResult(result);
+
+            // store results in local storage
+            const allRows = [...document.querySelectorAll("main > row")];
+            const coloredRows = allRows.filter((row) =>
+                [...row.children].some(
+                    (tile) => tile.classList.contains("grey") || tile.classList.contains("yellow") || tile.classList.contains("green")
+                )
+            );
+            localStorage.setItem(
+                "wordelSaveData",
+                JSON.stringify({
+                    version: 1,
+                    dayNumber,
+                    rows: coloredRows.map((row) => [
+                        [...row.children].map((tile) => tile.innerText).join(""),
+                        [...row.children].map((tile) => 2 * tile.classList.contains("green") + 1 * tile.classList.contains("yellow")),
+                    ]),
+                })
+            );
+        }
+        function clearSaveData() {
+            localStorage.clear("wordelSaveData");
+            window.location.href = window.location.href;
         }
 
         // timer
@@ -348,7 +376,24 @@
 
         // buttons
         window.addEventListener("DOMContentLoaded", () => {
+            // load save data from local storage
+            const saveDataString = localStorage.getItem("wordelSaveData");
+            const saveData =
+                saveDataString != undefined
+                    ? JSON.parse(saveDataString)
+                    : {
+                          version: 1,
+                          dayNumber,
+                          rows: [],
+                      };
             currentRow = [...document.querySelector("main row").children];
+            for (let row of saveData.rows) {
+                const [word, result] = row;
+                for (let char of word) {
+                    type(char);
+                }
+                setRowResult(result);
+            }
             document.body.onkeydown = (event) => {
                 type(event.key);
             };
@@ -368,7 +413,7 @@
                         (tile) => tile.classList.contains("grey") || tile.classList.contains("yellow") || tile.classList.contains("green")
                     )
                 );
-                const text = `Wordel ${getDayNumber()} ${coloredRows.length}/${allRows.length}\n${coloredRows
+                const text = `Wordel ${dayNumber} ${coloredRows.length}/${allRows.length}\n${coloredRows
                     .map((row) =>
                         [...row.children]
                             .map((tile) => {
