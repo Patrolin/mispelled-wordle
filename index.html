@@ -323,7 +323,7 @@
             const result = wordelResult(word, actualWord);
             setRowResult(result);
 
-            // store results in local storage
+            // store save data in local storage
             const allRows = [...document.querySelectorAll("main > row")];
             const coloredRows = allRows.filter((row) =>
                 [...row.children].some(
@@ -335,6 +335,7 @@
                 JSON.stringify({
                     version: 1,
                     dayNumber,
+                    actualWord,
                     rows: coloredRows.map((row) => [
                         [...row.children].map((tile) => tile.innerText).join(""),
                         [...row.children].map((tile) => 2 * tile.classList.contains("green") + 1 * tile.classList.contains("yellow")),
@@ -374,7 +375,6 @@
             });
         }
 
-        // buttons
         window.addEventListener("DOMContentLoaded", () => {
             // load save data from local storage
             const saveDataString = localStorage.getItem("wordelSaveData");
@@ -382,18 +382,23 @@
                 saveDataString != undefined
                     ? JSON.parse(saveDataString)
                     : {
-                          version: 1,
+                          version: 2,
                           dayNumber,
+                          actualWord,
                           rows: [],
                       };
             currentRow = [...document.querySelector("main row").children];
-            for (let row of saveData.rows) {
-                const [word, result] = row;
-                for (let char of word) {
-                    type(char);
+            if (dayNumber === saveData.dayNumber) {
+                for (let row of saveData.rows) {
+                    const [word, result] = row;
+                    for (let char of word) {
+                        type(char);
+                    }
+                    setRowResult(result);
                 }
-                setRowResult(result);
+                actualWord = saveData.actualWord;
             }
+            // buttons
             document.body.onkeydown = (event) => {
                 type(event.key);
             };
